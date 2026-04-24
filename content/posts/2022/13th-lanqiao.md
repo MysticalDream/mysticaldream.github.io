@@ -1280,6 +1280,117 @@ public class Main {
 >对于 30 %的数据，N,M$\leq$ 3.
 > 对于 100 %的数据， 0 <N,M$\leq$ 10.
 
+**第一种解法**
+```java
+import java.util.*;
+
+public class Main {
+    public static void main(String[] args) {
+        Scanner sc = new Scanner(System.in);
+        int N = sc.nextInt();
+        int M = sc.nextInt();
+
+        int[][] grid = new int[N][M];
+        List<int[]> empties = new ArrayList<>();
+
+        for (int i = 0; i < N; i++) {
+            for (int j = 0; j < M; j++) {
+                grid[i][j] = sc.nextInt();
+                if (grid[i][j] == 0) {
+                    empties.add(new int[]{i, j});
+                }
+            }
+        }
+
+        int K = empties.size();
+        // 少于三个空地无法放下小人、箱子和终点三个不同元素
+        if (K < 3) {
+            System.out.println(0);
+            return;
+        }
+
+        // 给每个空地分配一个 id
+        int[][] id = new int[N][M];
+        for (int i = 0; i < K; i++) {
+            int[] cell = empties.get(i);
+            id[cell[0]][cell[1]] = i;
+        }
+
+        int[] dx = {0, 0, 1, -1};
+        int[] dy = {1, -1, 0, 0};
+
+        long total = 0;
+
+        // 枚举每一个格子作为终点
+        for (int eIdx = 0; eIdx < K; eIdx++) {
+            // visited[box][player] 表示某个箱子-小人状态是否可达终点
+            boolean[][] visited = new boolean[K][K];
+            Queue<int[]> queue = new ArrayDeque<>();
+
+            // 起点：所有箱子已经在终点上的状态（小人可以在任意其他空地）
+            for (int pIdx = 0; pIdx < K; pIdx++) {
+                if (pIdx == eIdx) continue;
+                visited[eIdx][pIdx] = true;
+                queue.add(new int[]{eIdx, pIdx});
+            }
+
+            // 逆向 BFS
+            while (!queue.isEmpty()) {
+                int[] state = queue.poll();
+                int bIdx = state[0], pIdx = state[1];
+                int bx = empties.get(bIdx)[0], by = empties.get(bIdx)[1];
+                int px = empties.get(pIdx)[0], py = empties.get(pIdx)[1];
+
+                // 1. 逆向“只移动不拉箱子”
+                for (int d = 0; d < 4; d++) {
+                    int prevPx = px + dx[d];
+                    int prevPy = py + dy[d];
+                    if (prevPx >= 0 && prevPx < N && prevPy >= 0 && prevPy < M
+                            && grid[prevPx][prevPy] == 0) {
+                        int prevPIdx = id[prevPx][prevPy];
+                        // 小人不能退到箱子上
+                        if (prevPIdx != bIdx && !visited[bIdx][prevPIdx]) {
+                            visited[bIdx][prevPIdx] = true;
+                            queue.add(new int[]{bIdx, prevPIdx});
+                        }
+                    }
+                }
+
+                // 2. 逆向“拉箱子”
+                // 箱子和小人必须相邻
+                if (Math.abs(px - bx) + Math.abs(py - by) == 1) {
+                    int prevBoxX = 2 * bx - px;
+                    int prevBoxY = 2 * by - py;
+                    if (prevBoxX >= 0 && prevBoxX < N && prevBoxY >= 0 && prevBoxY < M
+                            && grid[prevBoxX][prevBoxY] == 0) {
+                        int prevBoxIdx = id[prevBoxX][prevBoxY];
+                        // 逆向拉箱子后，箱子在 prevBox，小人在 box 的原位置
+                        if (!visited[prevBoxIdx][bIdx]) {
+                            visited[prevBoxIdx][bIdx] = true;
+                            queue.add(new int[]{prevBoxIdx, bIdx});
+                        }
+                    }
+                }
+            }
+
+            // 统计当前终点下所有可解的初始局面
+            // 初始时箱子、小人和终点必须位于三个不同的格子
+            for (int bIdx = 0; bIdx < K; bIdx++) {
+                if (bIdx == eIdx) continue;
+                for (int pIdx = 0; pIdx < K; pIdx++) {
+                    if (pIdx == eIdx || pIdx == bIdx) continue;
+                    if (visited[bIdx][pIdx]) {
+                        total++;
+                    }
+                }
+            }
+        }
+
+        System.out.println(total);
+    }
+}
+```
+
 以上代码内容仅供参考，不一定正确
 
 
